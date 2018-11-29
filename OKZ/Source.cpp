@@ -35,7 +35,17 @@ Mat cornerHarris_demo(Mat src,int thresh)
 	
 	return src;
 }
-
+void Clamp(Mat base)
+{
+	
+	for (int i=0;i< base.rows;i++)
+		for (int j=0;j<base.cols;j++)
+		{/*
+			if (base.at<uchar>(i, j) < 0) base.at<uchar>(i, j) = 0;
+			if (base.at<uchar>(i, j) >255) base.at<uchar>(i, j) = 255;*/
+			//base.at<uchar>(i, j)=std::to_int(base.at<uchar>(i, j));
+		}
+}
 int main()
 {
 	cout << "Enter filename" << endl ;
@@ -52,9 +62,9 @@ int main()
 		return -1;
 	}
 
-	Mat outputKONTR = Mat::zeros(input.size(), CV_8UC1);
-	Mat outputPOINT = Mat::zeros(input.size(), CV_8UC1);
-	Mat points = Mat::zeros(input.size(), CV_8UC1);
+	//Mat outputKONTR = Mat::zeros(input.size(), CV_8UC1);
+	//Mat outputPOINT = Mat::zeros(input.size(), CV_8UC1);
+	//Mat points = Mat::zeros(input.size(), CV_8UC1);
 
 	unsigned int start_time = clock();
 
@@ -67,19 +77,27 @@ int main()
 	imshow("Linears", hist_equalized_image);
 
 	Mat outputCANNY;
-	Canny(input,outputCANNY, 10, 100, 3);               //4 метод Канни
+	Canny(gray,outputCANNY, 10, 100, 3);               //4 метод Канни
 	imshow("Canny", outputCANNY);
 
-	int thresh = 100;
-	int max_thresh = 255;
-	
-	points=cornerHarris_demo(outputCANNY,thresh);           //5
-	imshow("POINTS", points);
+	Mat corners = outputCANNY;
+	vector<Point2f> points;
+	goodFeaturesToTrack(outputCANNY, points, 100, 0.05, 3);               //5 угловые точки и дибильные кружочки
+	for (int i = 0; i < 100; ++i)
+		circle(corners, points[i], 2, 255, 2, 8, 0);
+//	circle(src, Point(j, i), );
+	imshow("Corners", corners);
 
-	cv::Mat dist;
-	cv::distanceTransform(points, dist, CV_DIST_L2, 3);
-	cv::normalize(dist, dist, 0, 1., cv::NORM_MINMAX);
-	imshow("Dist", dist);           //6
+	//int thresh = 100;
+	//int max_thresh = 255;
+	//
+	//points=cornerHarris_demo(outputCANNY,thresh);           //5
+	//imshow("POINTS", points);
+
+	//cv::Mat dist;
+	//cv::distanceTransform(points, dist, CV_DIST_L2, 3);
+	//cv::normalize(dist, dist, 0, 1., cv::NORM_MINMAX);
+	//imshow("Dist", dist);           //6
 
 	//unsigned int end_time = clock(); // конечное время
 //	unsigned int search_time = end_time - start_time; // искомое время
