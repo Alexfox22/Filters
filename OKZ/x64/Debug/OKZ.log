@@ -1,7 +1,2 @@
 ﻿  Source.cpp
-c:\users\nika-\source\repos\okz\okz\source.cpp(46): warning C4244: =: преобразование "double" в "_Tp", возможна потеря данных
-          with
-          [
-              _Tp=uchar
-          ]
   OKZ.vcxproj -> C:\Users\nika-\source\repos\OKZ\x64\Debug\OKZ.exe
