@@ -83,9 +83,6 @@ int main()
 	}
 	imshow("Filtered", filtered);
 
-	Mat integ;
-	norm7(gray, dist, integ, k);
-	imshow("7", integ);
 
 	auto end = chrono::high_resolution_clock::now();
 	auto elapsed = end - begin;
