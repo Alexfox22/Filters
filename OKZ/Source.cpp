@@ -3,75 +3,96 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <iostream>
-
 #include <fstream>
 #include <ctime>
+#include <chrono>
 using namespace cv;
 using namespace std;
 
 
+
 int main()
 {
+	auto begin = chrono::high_resolution_clock::now();
+	double k = 255;
 	cout << "Enter filename" << endl ;
 	string inputf;
 	cin >> inputf;
 	
 	string a = "C:\\";
 	Mat input = imread(a + inputf + ".jpg");//, IMREAD_GRAYSCALE);           //1 читаем картинку с котиками
-	//imshow("Input", input);
+	imshow("Input", input);
 	if (input.empty())
 	{
 		cout << "Could not open or find the image" << endl;
-		cin.get(); //wait for any key press
+		cin.get(); 
 		return -1;
 	}
 
-	//Mat outputKONTR = Mat::zeros(input.size(), CV_8UC1);
-	//Mat outputPOINT = Mat::zeros(input.size(), CV_8UC1);
-	//Mat points = Mat::zeros(input.size(), CV_8UC1);
-
-	unsigned int start_time = clock();
-
 	Mat gray;
-	cvtColor(input, gray, COLOR_BGR2GRAY);				//2 фигачим изображение в полутоновое
-
+	cvtColor(input, gray, COLOR_BGR2GRAY);				//2 изображение в полутоновое
 
 	Mat hist_equalized_image;
 	equalizeHist(gray, hist_equalized_image);			//3 улучшаем контраст
-	imshow("Linears", hist_equalized_image);
+//	imshow("Contrast", hist_equalized_image);
 
 	Mat outputCANNY;
 	Canny(gray,outputCANNY, 10, 100, 3);               //4 метод Канни
-	imshow("Canny", outputCANNY);
+//	imshow("Canny", outputCANNY);
 
 	Mat corners = outputCANNY;
 	vector<Point2f> points;
-	goodFeaturesToTrack(outputCANNY, points, 100, 0.05, 3);               //5 угловые точки и дибильные кружочки
-	for (int i = 0; i < 100; ++i)
+	goodFeaturesToTrack(outputCANNY, points, 100, 0.05, 3);               //5 угловые точки и кружочки
+	for (int i = 0; i < points.size(); ++i)
 		circle(corners, points[i], 2, 255, 2, 8, 0);
-	imshow("Corners", corners);
+	//imshow("Corners", corners);
+
 
 	Mat dist;
 	distanceTransform(255-corners, dist, CV_DIST_L2, 5);
+	normalize(dist, dist, 0, 255, NORM_MINMAX);
+//	imshow("Distance", dist);												  //6 карта расстояний
+	dist.convertTo(dist, CV_8U);
 	normalize(dist, dist, 0, 1, NORM_MINMAX);// 1., NORM_MINMAX);
-	imshow("Dist", dist);												  //6 карта расстояний
 
+	Mat integ;
+	integral(input, integ, -1);
+	int height = input.size().height;
+	int width = input.size().width;
+	int channels = input.channels();
 
-	
+	Mat filtered = input.clone();
+	for (int ch = 0; ch < channels; ch++)
+	{
+		for (int i = 0; i < height; i++)
+		{
+			for (int j = 0; j < width; j++)
+			{
+				int kernelDiam = dist.at<uchar>(i, j);
+				if (kernelDiam % 2 == 0)
+					kernelDiam++;
+				if ((i <= kernelDiam / 2) || (j <= kernelDiam / 2) || (j > width - kernelDiam / 2 - 1) || (i > height - kernelDiam / 2 - 1) || (kernelDiam <= 1))
+					continue;
+				float sum = (integ.at<Vec3f>(i - kernelDiam / 2 - 1, j - kernelDiam / 2 - 1)(ch)
+					- integ.at<Vec3f>(i - kernelDiam / 2 - 1, j + kernelDiam / 2)(ch)
+					+ integ.at<Vec3f>(i + kernelDiam / 2, j + kernelDiam / 2)(ch)
+					- integ.at<Vec3f>(i + kernelDiam / 2, j - kernelDiam / 2 - 1)(ch));
+				filtered.at<Vec3b>(i, j)(ch) = sum / (float)(pow(kernelDiam, 2));
+			}
+		}
+	}
+	imshow("Filtered", filtered);
 
+	Mat integ;
+	norm7(gray, dist, integ, k);
+	imshow("7", integ);
 
-	//int thresh = 100;
-	//int max_thresh = 255;
-	//
-	//points=cornerHarris_demo(outputCANNY,thresh);           //5
-	//imshow("POINTS", points);
-
-
-
-	//unsigned int end_time = clock(); // конечное время
-//	unsigned int search_time = end_time - start_time; // искомое время
-	//cout << "LINE ----------> " << search_time << endl;
-
+	auto end = chrono::high_resolution_clock::now();
+	auto elapsed = end - begin;
+	auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
+	cout << endl << "Time spent: " << milliseconds << endl;
+	float Fps = 6 / (milliseconds / 1000.f);
+	cout << "Fps: " << Fps << endl;
 
 	cvWaitKey(0);
 	return 0;
